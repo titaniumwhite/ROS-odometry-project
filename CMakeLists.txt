@@ -9,6 +9,7 @@ project(project_robotics)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   robotics_hw1
+  message_filters
 )
 
 ## System dependencies are found with CMake's conventions
@@ -39,11 +40,9 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+#add_message_files(FILES
+#  MotorSpeed.msg
+#)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -128,7 +127,9 @@ include_directories(
 # add_executable(${PROJECT_NAME}_node src/project_robotics_node.cpp)
 add_executable(odometry src/odometry.cpp)
 add_dependencies(odometry ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
+target_link_libraries(odometry
+  ${catkin_LIBRARIES}
+)
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
