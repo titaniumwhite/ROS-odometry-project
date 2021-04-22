@@ -10,6 +10,7 @@ project(project_robotics)
 find_package(catkin REQUIRED COMPONENTS
   robotics_hw1
   message_filters
+  nav_msgs
 )
 
 ## System dependencies are found with CMake's conventions
