@@ -95,18 +95,18 @@ void angular_velocity_estimator(Wheels_rpm *rpm, double *linear_velocity, double
 
 void callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotics_hw1::MotorSpeed::ConstPtr& msg2,
               const robotics_hw1::MotorSpeed::ConstPtr& msg3, const robotics_hw1::MotorSpeed::ConstPtr& msg4, 
-              const nav_msgs::Odometry::ConstPtr& msg5, Wheels_rpm *rpm, twist_stamped *my_twist_stamped) {
+              const nav_msgs::Odometry::ConstPtr& msg5, Wheels_rpm *wheels_rpm, twist_stamped *my_twist_stamped) {
   
   double linear_velocity;
   double angular_velocity;
 
-  rpm->fl = msg1->rpm;
-  rpm->fr = msg2->rpm;
-  rpm->rl = msg3->rpm;
-  rpm->rr = msg4->rpm;
+  wheels_rpm->fl = msg1->rpm;
+  wheels_rpm->fr = msg2->rpm;
+  wheels_rpm->rl = msg3->rpm;
+  wheels_rpm->rr = msg4->rpm;
 
   ROS_INFO("Their angular velocity: [%f]", msg5->twist.twist.angular.z);
-  angular_velocity_estimator(data, &linear_velocity, &angular_velocity);
+  angular_velocity_estimator(wheels_rpm, &linear_velocity, &angular_velocity);
   my_twist_stamped->publish_twist_stamped(&linear_velocity, &angular_velocity);
 
   //ROS_INFO ("Linear velocity is : [%f]", linear_velocity);  
@@ -116,7 +116,7 @@ void callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotics_hw1
 int main(int argc, char** argv) {
     ros::init(argc, argv, "odometry");
     
-    Data data;
+    Wheels_rpm wheels_rpm;
     twist_stamped *my_twist_stamped;
     my_twist_stamped = new twist_stamped();
 
@@ -132,7 +132,7 @@ int main(int argc, char** argv) {
                                       robotics_hw1::MotorSpeed, robotics_hw1::MotorSpeed, 
                                       nav_msgs::Odometry> sync(sub1, sub2, sub3, sub4, sub5, 10);
     
-    sync.registerCallback(boost::bind(&callback, _1, _2, _3, _4, _5, &data, my_twist_stamped));
+    sync.registerCallback(boost::bind(&callback, _1, _2, _3, _4, _5, &wheels_rpm, my_twist_stamped));
 
     ros::spin();
 
