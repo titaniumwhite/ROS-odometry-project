@@ -8,7 +8,7 @@
 #define GEAR_RATIO 1.375 // value between 1.35 and 1.4, see in "reduction gearbox" or estimate
 #define RPM_TO_RADS 0.104719755
 #define RADIUS 0.1575
-#define BASELINE 28.3
+#define BASELINE 28.753  
 
 typedef struct pose {
   double x;
