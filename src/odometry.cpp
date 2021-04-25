@@ -4,6 +4,9 @@
 #include <robotics_hw1/MotorSpeed.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TwistStamped.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <tf/tf.h>
+
 
 #define GEAR_RATIO 1.375 // value between 1.35 and 1.4, see in "reduction gearbox" or estimate
 #define RPM_TO_RADS 0.104719755
@@ -55,18 +58,58 @@ public:
 };
 
 class skid_steering {
-
 private:
   Pose current_pose;
 
   double linear_velocity;
   double angular_velocity;
 
+  double current_time;
+  double prev_time;
+
+  int method; // 0 for Eurler, 1 for Runge-Kutta
+
   ros::NodeHandle skid_steering_node;
   ros::Publisher skid_steering_pub;
+  
+  boost::shared_ptr<geometry_msgs::PoseStamped const> initial_pose_shared;
+  geometry_msgs::PoseStamped initial_pose;
 
 public:
 
+  skid_steering() {
+    get_initial_pose(&current_pose.x, &current_pose.y, &current_pose.theta);
+
+    linear_velocity = 0;
+    angular_velocity = 0;
+
+    skid_steering_pub = skid_steering_node.advertise<nav_msgs::Odometry>("/odometry", 50);
+  }
+
+  void get_initial_pose(double *x, double *y, double *theta) {
+    initial_pose_shared = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/gt_pose", skid_steering_node);
+
+    if (initial_pose_shared != NULL) {
+      initial_pose = *initial_pose_shared;
+
+      tf::Quaternion q(
+        initial_pose.pose.orientation.x,
+        initial_pose.pose.orientation.y,
+        initial_pose.pose.orientation.z,
+        initial_pose.pose.orientation.w
+      );
+
+      tf::Matrix3x3 m(q);
+      m.getRPY(*std::unique_ptr<double>(new double),
+               *std::unique_ptr<double>(new double),
+               *theta);
+
+      *x = initial_pose.pose.position.x;
+      *y = initial_pose.pose.position.y;
+
+      ROS_INFO("Initial pose: [%f, %f, %f]", current_pose.x, current_pose.y, current_pose.theta);
+    }
+  }
 
 };
 
@@ -119,6 +162,9 @@ int main(int argc, char** argv) {
     Wheels_rpm wheels_rpm;
     twist_stamped *my_twist_stamped;
     my_twist_stamped = new twist_stamped();
+
+    skid_steering *my_skid_steering;
+    my_skid_steering = new skid_steering();    
 
     ros::NodeHandle sync_node;
 
