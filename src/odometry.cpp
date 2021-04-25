@@ -26,6 +26,11 @@ typedef struct rpm {
   double rr;
 } Wheels_rpm;
 
+typedef struct velocity {
+  double linear;
+  double angular;
+} Velocity;
+
 class twist_stamped {
 private:
   ros::NodeHandle twist_stamped_node;
@@ -37,20 +42,20 @@ public:
     twist_stamped_pub = twist_stamped_node.advertise<geometry_msgs::TwistStamped>("/twist_stamped", 50);
   }
 
-  void publish_twist_stamped(double *linear_velocity, double *angular_velocity) {
+  void publish_twist_stamped(Velocity *velocity) {
 
     geometry_msgs::TwistStamped twist_stamped;
 
     twist_stamped.header.stamp = ros::Time::now();
     twist_stamped.header.frame_id = "twist_stamped";
 
-    twist_stamped.twist.linear.x = *linear_velocity;
+    twist_stamped.twist.linear.x = velocity->linear;
     twist_stamped.twist.linear.y = 0.0;
     twist_stamped.twist.linear.z = 0.0;
 
     twist_stamped.twist.angular.x = 0.0;
     twist_stamped.twist.angular.y = 0.0;
-    twist_stamped.twist.angular.z = *angular_velocity;
+    twist_stamped.twist.angular.z = velocity->angular;
 
     twist_stamped_pub.publish(twist_stamped);
   }
@@ -113,8 +118,12 @@ public:
 
 };
 
+void euler_integration() {
 
-void angular_velocity_estimator(Wheels_rpm *rpm, double *linear_velocity, double *angular_velocity){
+}
+
+
+void angular_velocity_estimator(Wheels_rpm *rpm, Velocity *velocity){
 
   // get an average left wheels rpm, also taking into account the reduction gear
   double left_wheel_avg_rpm  = (rpm->fl + rpm->rl) / (2 * GEAR_RATIO);
@@ -123,12 +132,12 @@ void angular_velocity_estimator(Wheels_rpm *rpm, double *linear_velocity, double
   double left_avg_velocity  = left_wheel_avg_rpm  * RADIUS * RPM_TO_RADS;
   double right_avg_velocity = right_wheel_avg_rpm * RADIUS * RPM_TO_RADS;
 
-  *linear_velocity = (left_avg_velocity + right_avg_velocity) / (2.0);
+  velocity->linear = (left_avg_velocity + right_avg_velocity) / (2.0);
 
   //double left_angular_velocity = (linear_velocity - (-BASELINE) * angular_velocity) / (RADIUS);
   //double right_angular_velocity = (linear_velocity - BASELINE * angular_velocity) / (RADIUS); //estimate apparent_baseline
   //*angular_velocity = 12321.0;
-  *angular_velocity = ( right_avg_velocity + left_avg_velocity ) / (BASELINE); //estimate apparent_baseline
+  velocity->angular = ( right_avg_velocity + left_avg_velocity ) / (BASELINE); //estimate apparent_baseline
 
 
   //ROS_INFO ("Linear velocity is : [%f]", linear_velocity);  
@@ -138,22 +147,20 @@ void angular_velocity_estimator(Wheels_rpm *rpm, double *linear_velocity, double
 
 void callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotics_hw1::MotorSpeed::ConstPtr& msg2,
               const robotics_hw1::MotorSpeed::ConstPtr& msg3, const robotics_hw1::MotorSpeed::ConstPtr& msg4, 
-              const nav_msgs::Odometry::ConstPtr& msg5, Wheels_rpm *wheels_rpm, twist_stamped *my_twist_stamped) {
-  
-  double linear_velocity;
-  double angular_velocity;
+              const nav_msgs::Odometry::ConstPtr& msg5, Wheels_rpm *wheels_rpm, twist_stamped *my_twist_stamped,
+              Velocity *velocity) {
 
   wheels_rpm->fl = msg1->rpm;
   wheels_rpm->fr = msg2->rpm;
   wheels_rpm->rl = msg3->rpm;
   wheels_rpm->rr = msg4->rpm;
 
-  ROS_INFO("Their angular velocity: [%f]", msg5->twist.twist.angular.z);
-  angular_velocity_estimator(wheels_rpm, &linear_velocity, &angular_velocity);
-  my_twist_stamped->publish_twist_stamped(&linear_velocity, &angular_velocity);
+  angular_velocity_estimator(wheels_rpm, velocity);
+  my_twist_stamped->publish_twist_stamped(velocity);
 
-  //ROS_INFO ("Linear velocity is : [%f]", linear_velocity);  
-  ROS_INFO ("My angular velocity : [%f]\n", angular_velocity); 
+  /*ROS_INFO ("Linear velocity is : [%f]", velocity->linear);  
+  ROS_INFO("Their angular velocity: [%f]", msg5->twist.twist.angular.z);
+  ROS_INFO ("My angular velocity : [%f]\n", velocity->angular);*/ 
 }
 
 int main(int argc, char** argv) {
@@ -161,6 +168,7 @@ int main(int argc, char** argv) {
     
     Wheels_rpm wheels_rpm;
     twist_stamped *my_twist_stamped;
+    Velocity velocity;
     my_twist_stamped = new twist_stamped();
 
     skid_steering *my_skid_steering;
@@ -178,7 +186,7 @@ int main(int argc, char** argv) {
                                       robotics_hw1::MotorSpeed, robotics_hw1::MotorSpeed, 
                                       nav_msgs::Odometry> sync(sub1, sub2, sub3, sub4, sub5, 10);
     
-    sync.registerCallback(boost::bind(&callback, _1, _2, _3, _4, _5, &wheels_rpm, my_twist_stamped));
+    sync.registerCallback(boost::bind(&callback, _1, _2, _3, _4, _5, &wheels_rpm, my_twist_stamped, &velocity));
 
     ros::spin();
 
