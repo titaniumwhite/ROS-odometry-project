@@ -140,7 +140,7 @@ public:
 void angular_velocity_estimator(Wheels_rpm *rpm, Velocity *velocity){
 
   // get an average left wheels rpm, also taking into account the reduction gear
-  double left_wheel_avg_rpm  = (rpm->fl + rpm->rl) / (2 * GEAR_RATIO);
+  double left_wheel_avg_rpm  = - (rpm->fl + rpm->rl) / (2 * GEAR_RATIO);
   double right_wheel_avg_rpm = (rpm->fr + rpm->rr) / (2 * GEAR_RATIO);
 
   double left_avg_velocity  = left_wheel_avg_rpm  * RADIUS * RPM_TO_RADS;
@@ -151,7 +151,7 @@ void angular_velocity_estimator(Wheels_rpm *rpm, Velocity *velocity){
   //double left_angular_velocity = (linear_velocity - (-BASELINE) * angular_velocity) / (RADIUS);
   //double right_angular_velocity = (linear_velocity - BASELINE * angular_velocity) / (RADIUS); //estimate apparent_baseline
 
-  velocity->angular = ( right_avg_velocity + left_avg_velocity ) / (BASELINE);                                                              
+  velocity->angular = ( right_avg_velocity - left_avg_velocity ) / (BASELINE);                                                              
 }
 
 
