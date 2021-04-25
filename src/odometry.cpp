@@ -6,7 +6,7 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/tf.h>
-
+#include <math.h>
 
 #define GEAR_RATIO 1.375 // value between 1.35 and 1.4, see in "reduction gearbox" or estimate
 #define RPM_TO_RADS 0.104719755
@@ -65,9 +65,9 @@ public:
 class skid_steering {
 private:
   Pose current_pose;
+  Pose prev_pose;
   Velocity velocity;
 
-  double current_time;
   double prev_time;
 
   int method; // 0 for Eurler, 1 for Runge-Kutta
@@ -81,15 +81,18 @@ private:
 public:
 
   skid_steering() {
-    get_initial_pose(&current_pose.x, &current_pose.y, &current_pose.theta);
+    get_initial_pose(&prev_pose.x, &prev_pose.y, &prev_pose.theta);
+
+    current_pose.x = 0;
+    current_pose.y = 0;
+    current_pose.theta = 0;
 
     velocity.linear = 0;
     velocity.angular = 0;
     
-    current_time = 0;
     prev_time = 0;
 
-    skid_steering_pub = skid_steering_node.advertise<nav_msgs::Odometry>("/odometry", 50);
+    skid_steering_pub = skid_steering_node.advertise<nav_msgs::Odometry>("/Odometry", 50);
   }
 
   void get_initial_pose(double *x, double *y, double *theta) {
@@ -117,12 +120,22 @@ public:
     }
   }
 
+  void euler_integration(Velocity *velocity, double current_time) {
+    double delta_time = current_time - prev_time;
+    current_pose.x = prev_pose.x + velocity->linear * delta_time * cos(prev_pose.theta);
+    current_pose.y = prev_pose.y + velocity->linear * delta_time * sin(prev_pose.theta);
+    current_pose.theta = prev_pose.theta + velocity->angular * delta_time;
+
+    ROS_INFO("Delta time [%f]", delta_time);
+    ROS_INFO("Position [x, y, theta] [%f, %f, %f]\n", current_pose.x, current_pose.y, current_pose.theta);
+
+    prev_pose.x = current_pose.x;
+    prev_pose.y = current_pose.y;
+    prev_pose.theta = current_pose.theta;
+    prev_time = current_time;
+  }
+
 };
-
-void euler_integration() {
-
-}
-
 
 void angular_velocity_estimator(Wheels_rpm *rpm, Velocity *velocity){
 
@@ -137,19 +150,15 @@ void angular_velocity_estimator(Wheels_rpm *rpm, Velocity *velocity){
 
   //double left_angular_velocity = (linear_velocity - (-BASELINE) * angular_velocity) / (RADIUS);
   //double right_angular_velocity = (linear_velocity - BASELINE * angular_velocity) / (RADIUS); //estimate apparent_baseline
-  //*angular_velocity = 12321.0;
-  velocity->angular = ( right_avg_velocity + left_avg_velocity ) / (BASELINE); //estimate apparent_baseline
 
-
-  //ROS_INFO ("Linear velocity is : [%f]", linear_velocity);  
-  //ROS_INFO ("My angular velocity : [%f]\n", angular_velocity);                                                                
+  velocity->angular = ( right_avg_velocity + left_avg_velocity ) / (BASELINE);                                                              
 }
 
 
 void callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotics_hw1::MotorSpeed::ConstPtr& msg2,
               const robotics_hw1::MotorSpeed::ConstPtr& msg3, const robotics_hw1::MotorSpeed::ConstPtr& msg4, 
-              const nav_msgs::Odometry::ConstPtr& msg5, Wheels_rpm *wheels_rpm, twist_stamped *my_twist_stamped,
-              Velocity *velocity) {
+              const nav_msgs::Odometry::ConstPtr& msg5, Wheels_rpm *wheels_rpm, Velocity *velocity, 
+              twist_stamped *my_twist_stamped, skid_steering *my_skid_steering) {
 
   wheels_rpm->fl = msg1->rpm;
   wheels_rpm->fr = msg2->rpm;
@@ -158,10 +167,11 @@ void callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotics_hw1
 
   angular_velocity_estimator(wheels_rpm, velocity);
   my_twist_stamped->publish_twist_stamped(velocity);
+  my_skid_steering->euler_integration(velocity, msg1->header.stamp.toSec());
 
   /*ROS_INFO ("Linear velocity is : [%f]", velocity->linear);  
   ROS_INFO("Their angular velocity: [%f]", msg5->twist.twist.angular.z);
-  ROS_INFO ("My angular velocity : [%f]\n", velocity->angular);*/ 
+  ROS_INFO ("My angular velocity : [%f]\n", velocity->angular);*/
 }
 
 int main(int argc, char** argv) {
@@ -187,7 +197,7 @@ int main(int argc, char** argv) {
                                       robotics_hw1::MotorSpeed, robotics_hw1::MotorSpeed, 
                                       nav_msgs::Odometry> sync(sub1, sub2, sub3, sub4, sub5, 10);
     
-    sync.registerCallback(boost::bind(&callback, _1, _2, _3, _4, _5, &wheels_rpm, my_twist_stamped, &velocity));
+    sync.registerCallback(boost::bind(&callback, _1, _2, _3, _4, _5, &wheels_rpm, &velocity, my_twist_stamped, my_skid_steering));
 
     ros::spin();
 
