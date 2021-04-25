@@ -8,10 +8,10 @@
 #include <tf/tf.h>
 #include <math.h>
 
-#define GEAR_RATIO 1.375 // value between 1.35 and 1.4, see in "reduction gearbox" or estimate
+#define GEAR_RATIO 0.0263         // 1.375 
 #define RPM_TO_RADS 0.104719755
 #define RADIUS 0.1575
-#define BASELINE 28.753  
+#define BASELINE 1.03465          // 28.753  // modificare dopo aver settato per bene la gear_ratio
 
 typedef struct pose {
   double x;
