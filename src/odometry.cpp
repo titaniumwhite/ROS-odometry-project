@@ -65,9 +65,7 @@ public:
 class skid_steering {
 private:
   Pose current_pose;
-
-  double linear_velocity;
-  double angular_velocity;
+  Velocity velocity;
 
   double current_time;
   double prev_time;
@@ -85,8 +83,11 @@ public:
   skid_steering() {
     get_initial_pose(&current_pose.x, &current_pose.y, &current_pose.theta);
 
-    linear_velocity = 0;
-    angular_velocity = 0;
+    velocity.linear = 0;
+    velocity.angular = 0;
+    
+    current_time = 0;
+    prev_time = 0;
 
     skid_steering_pub = skid_steering_node.advertise<nav_msgs::Odometry>("/odometry", 50);
   }
