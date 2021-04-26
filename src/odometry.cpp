@@ -146,11 +146,8 @@ void angular_velocity_estimator(Wheels_rpm *rpm, Velocity *velocity){
   double left_avg_velocity  = left_wheels_avg_rpm  * RADIUS * RPM_TO_RADS;
   double right_avg_velocity = right_wheels_avg_rpm * RADIUS * RPM_TO_RADS;
 
-  velocity->linear = (left_avg_velocity + right_avg_velocity) / (2.0);
 
-  //double left_angular_velocity = (linear_velocity - (-BASELINE) * angular_velocity) / (RADIUS);
-  //double right_angular_velocity = (linear_velocity - BASELINE * angular_velocity) / (RADIUS); //estimate apparent_baseline
-
+  velocity->linear  = ( left_avg_velocity + right_avg_velocity ) / (2.0);
   velocity->angular = ( right_avg_velocity - left_avg_velocity ) / (BASELINE);                                                              
 }
 
@@ -169,10 +166,12 @@ void callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotics_hw1
   my_twist_stamped->publish_twist_stamped(velocity);
   my_skid_steering->euler_integration(velocity, msg1->header.stamp.toSec());
 
+  /*
   ROS_INFO("Their angular velocity: [%f]", msg5->twist.twist.linear.x);
   ROS_INFO ("My linear velocity is : [%f]", velocity->linear);  
   ROS_INFO("Their angular velocity: [%f]", msg5->twist.twist.angular.z);
   ROS_INFO ("My angular velocity : [%f]\n", velocity->angular);
+  */
 }
 
 int main(int argc, char** argv) {
