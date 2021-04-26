@@ -47,6 +47,13 @@ public:
     geometry_msgs::TwistStamped twist_stamped;
 
     twist_stamped.header.stamp = ros::Time::now();
+    /* 
+    * Se stai scorrendo, fermati a leggere questo commento. Per favore.
+    * Sono le 23.36 di un lunedì sera e sto cercando sul webbe cosa siano il frame_id e il child_frame_id.
+    * Purtroppo non ho trovato nulla di rilevante. Per questo motivo, sto scrivendo questo commento il cui unico 
+    * scopo è quello di chiederti: il seguente frame_id, secondo te, è settato correttamente? 
+    * Grazie per la risp <3
+    */
     twist_stamped.header.frame_id = "twist_stamped";
 
     twist_stamped.twist.linear.x = velocity->linear;
@@ -82,6 +89,7 @@ public:
 
   skid_steering() {
     get_initial_pose(&prev_pose.x, &prev_pose.y, &prev_pose.theta);
+    skid_steering_pub = skid_steering_node.advertise<nav_msgs::Odometry>("/Odometry", 50);
 
     current_pose.x = 0;
     current_pose.y = 0;
@@ -91,8 +99,6 @@ public:
     velocity.angular = 0;
     
     prev_time = 0;
-
-    skid_steering_pub = skid_steering_node.advertise<nav_msgs::Odometry>("/Odometry", 50);
   }
 
   void get_initial_pose(double *x, double *y, double *theta) {
@@ -116,7 +122,7 @@ public:
       *x = initial_pose.pose.position.x;
       *y = initial_pose.pose.position.y;
 
-      ROS_INFO("Initial pose: [%f, %f, %f]", current_pose.x, current_pose.y, current_pose.theta);
+      ROS_INFO("Initial pose: [%f, %f, %f]", *x, *y, *theta);
     }
   }
 
@@ -125,14 +131,54 @@ public:
     current_pose.x = prev_pose.x + velocity->linear * delta_time * cos(prev_pose.theta);
     current_pose.y = prev_pose.y + velocity->linear * delta_time * sin(prev_pose.theta);
     current_pose.theta = prev_pose.theta + velocity->angular * delta_time;
-
-    ROS_INFO("Delta time [%f]", delta_time);
-    ROS_INFO("Position [x, y, theta] [%f, %f, %f]\n", current_pose.x, current_pose.y, current_pose.theta);
+    
+    /*ROS_INFO("EULER: Delta time [%f]", delta_time);
+    ROS_INFO("EULER: Position [x, y, theta] [%f, %f, %f]\n", current_pose.x, current_pose.y, current_pose.theta);*/
 
     prev_pose.x = current_pose.x;
     prev_pose.y = current_pose.y;
     prev_pose.theta = current_pose.theta;
     prev_time = current_time;
+  }
+
+  void runge_kutta_integration(Velocity *velocity, double current_time) {
+    double delta_time = current_time - prev_time;
+    current_pose.x = prev_pose.x + velocity->linear * delta_time * cos(prev_pose.theta + ((velocity->angular * delta_time) / 2 ));
+    current_pose.y = prev_pose.y + velocity->linear * delta_time * sin(prev_pose.theta + ((velocity->angular * delta_time) / 2 ));
+    current_pose.theta = prev_pose.theta + velocity->angular * delta_time;
+
+    ROS_INFO("RK: Delta time [%f]", delta_time);
+    ROS_INFO("RK: Position [x, y, theta] [%f, %f, %f]\n", current_pose.x, current_pose.y, current_pose.theta);
+
+    prev_pose.x = current_pose.x;
+    prev_pose.y = current_pose.y;
+    prev_pose.theta = current_pose.theta;
+    prev_time = current_time;
+  }
+
+  void publish_odometry(Velocity *velocity) {
+    nav_msgs::Odometry odometry;
+
+    odometry.header.stamp = ros::Time::now();
+    odometry.header.frame_id = "odom";
+
+    odometry.pose.pose.position.x = current_pose.x;
+    odometry.pose.pose.position.y = current_pose.y;
+    odometry.pose.pose.position.z = 0.0;
+    odometry.pose.pose.orientation = tf::createQuaternionMsgFromYaw(current_pose.theta);
+
+    odometry.child_frame_id = "base_link";
+    odometry.twist.twist.linear.x = velocity->linear;
+    odometry.twist.twist.linear.y = 0;
+    odometry.twist.twist.linear.z = 0;
+    odometry.twist.twist.angular.z = 0;
+    odometry.twist.twist.angular.y = 0;
+    odometry.twist.twist.angular.z = velocity->angular;
+
+    ROS_INFO ("My linear velocity is : [%f]", velocity->linear);  
+    ROS_INFO ("My angular velocity : [%f]\n", velocity->angular);
+
+    skid_steering_pub.publish(odometry);
   }
 
 };
@@ -165,6 +211,8 @@ void callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotics_hw1
   angular_velocity_estimator(wheels_rpm, velocity);
   my_twist_stamped->publish_twist_stamped(velocity);
   my_skid_steering->euler_integration(velocity, msg1->header.stamp.toSec());
+  //my_skid_steering->runge_kutta_integration(velocity, msg1->header.stamp.toSec());
+  my_skid_steering->publish_odometry(velocity);
 
   /*
   ROS_INFO("Their angular velocity: [%f]", msg5->twist.twist.linear.x);
