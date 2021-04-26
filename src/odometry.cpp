@@ -140,11 +140,11 @@ public:
 void angular_velocity_estimator(Wheels_rpm *rpm, Velocity *velocity){
 
   // get an average left wheels rpm, also taking into account the reduction gear
-  double left_wheel_avg_rpm  = - (rpm->fl + rpm->rl) / (2 * GEAR_RATIO);
-  double right_wheel_avg_rpm = (rpm->fr + rpm->rr) / (2 * GEAR_RATIO);
+  double left_wheels_avg_rpm  = - ((rpm->fl + rpm->rl) * GEAR_RATIO ) / 2;
+  double right_wheels_avg_rpm =   ((rpm->fr + rpm->rr) * GEAR_RATIO ) / 2;
 
-  double left_avg_velocity  = left_wheel_avg_rpm  * RADIUS * RPM_TO_RADS;
-  double right_avg_velocity = right_wheel_avg_rpm * RADIUS * RPM_TO_RADS;
+  double left_avg_velocity  = left_wheels_avg_rpm  * RADIUS * RPM_TO_RADS;
+  double right_avg_velocity = right_wheels_avg_rpm * RADIUS * RPM_TO_RADS;
 
   velocity->linear = (left_avg_velocity + right_avg_velocity) / (2.0);
 
@@ -169,9 +169,10 @@ void callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotics_hw1
   my_twist_stamped->publish_twist_stamped(velocity);
   my_skid_steering->euler_integration(velocity, msg1->header.stamp.toSec());
 
-  /*ROS_INFO ("Linear velocity is : [%f]", velocity->linear);  
+  ROS_INFO("Their angular velocity: [%f]", msg5->twist.twist.linear.x);
+  ROS_INFO ("My linear velocity is : [%f]", velocity->linear);  
   ROS_INFO("Their angular velocity: [%f]", msg5->twist.twist.angular.z);
-  ROS_INFO ("My angular velocity : [%f]\n", velocity->angular);*/
+  ROS_INFO ("My angular velocity : [%f]\n", velocity->angular);
 }
 
 int main(int argc, char** argv) {
