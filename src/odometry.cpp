@@ -8,10 +8,10 @@
 #include <tf/tf.h>
 #include <math.h>
 
-#define GEAR_RATIO 0.0263         // 1.375 
+#define GEAR_RATIO 0.02615575                 
 #define RPM_TO_RADS 0.104719755
 #define RADIUS 0.1575
-#define BASELINE 1.03465          // 28.753  // modificare dopo aver settato per bene la gear_ratio
+#define APPARENT_BASELINE 1.03334887          
 
 typedef struct pose {
   double x;
@@ -53,6 +53,8 @@ public:
     * Purtroppo non ho trovato nulla di rilevante. Per questo motivo, sto scrivendo questo commento il cui unico 
     * scopo è quello di chiederti: il seguente frame_id, secondo te, è settato correttamente? 
     * Grazie per la risp <3
+    * 
+    * Io non ti conosco
     */
     twist_stamped.header.frame_id = "twist_stamped";
 
@@ -175,8 +177,8 @@ public:
     odometry.twist.twist.angular.y = 0;
     odometry.twist.twist.angular.z = velocity->angular;
 
-    ROS_INFO ("My linear velocity is : [%f]", velocity->linear);  
-    ROS_INFO ("My angular velocity : [%f]\n", velocity->angular);
+    ROS_INFO ("My linear  velocity is : [%f]", velocity->linear);  
+    ROS_INFO ("My angular velocity is : [%f]\n", velocity->angular);
 
     skid_steering_pub.publish(odometry);
   }
@@ -194,7 +196,7 @@ void angular_velocity_estimator(Wheels_rpm *rpm, Velocity *velocity){
 
 
   velocity->linear  = ( left_avg_velocity + right_avg_velocity ) / (2.0);
-  velocity->angular = ( right_avg_velocity - left_avg_velocity ) / (BASELINE);                                                              
+  velocity->angular = ( right_avg_velocity - left_avg_velocity ) / (APPARENT_BASELINE);                                                              
 }
 
 
@@ -215,11 +217,12 @@ void callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotics_hw1
   my_skid_steering->publish_odometry(velocity);
 
   /*
-  ROS_INFO("Their angular velocity: [%f]", msg5->twist.twist.linear.x);
-  ROS_INFO ("My linear velocity is : [%f]", velocity->linear);  
-  ROS_INFO("Their angular velocity: [%f]", msg5->twist.twist.angular.z);
-  ROS_INFO ("My angular velocity : [%f]\n", velocity->angular);
+  ROS_INFO ("Their linear velocity is  : [%f]", msg5->twist.twist.linear.x);
+  ROS_INFO ("My linear velocity is     : [%f]\n", velocity->linear);  
+  ROS_INFO ("Their angular velocity is : [%f]", msg5->twist.twist.angular.z);
+  ROS_INFO ("My angular velocity is    : [%f]\n", velocity->angular);
   */
+  
 }
 
 int main(int argc, char** argv) {
