@@ -81,6 +81,7 @@ private:
   double prev_time;
 
   int method; // 0 for Eurler, 1 for Runge-Kutta
+  bool still_not_set; // to avoid setting initial pose repeatedly
 
   ros::NodeHandle skid_steering_node;
   ros::Publisher skid_steering_pub;
@@ -92,7 +93,6 @@ public:
 
   skid_steering() {
 
-    get_initial_pose(&prev_pose.x, &prev_pose.y, &prev_pose.theta);
     skid_steering_pub = skid_steering_node.advertise<nav_msgs::Odometry>("/Odometry", 50);
 
     current_pose.x = 0;
@@ -101,38 +101,18 @@ public:
 
     velocity.linear = 0;
     velocity.angular = 0;
+
+    still_not_set = true;
     
     prev_time = 0;
   }
 
-  void get_initial_pose(double *x, double *y, double *theta) {
-    initial_pose_shared = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/gt_pose", skid_steering_node);
-    
-    if (initial_pose_shared != NULL) {
-      initial_pose = *initial_pose_shared;
-
-      tf::Quaternion q(
-        initial_pose.pose.orientation.x,
-        initial_pose.pose.orientation.y,
-        initial_pose.pose.orientation.z,
-        initial_pose.pose.orientation.w
-      );
-      /*
-      tf::Matrix3x3 m(q);
-      m.getRPY(*std::unique_ptr<double>(new double),
-               *std::unique_ptr<double>(new double),
-               *theta);
-               *///decom
-
-      *x = initial_pose.pose.position.x;
-      *y = initial_pose.pose.position.y;
-
-      *x = 0;
-      *y = 0;
-      *theta = 0;
-
-      ROS_INFO("Initial pose: [%f, %f, %f]", *x, *y, *theta);
-  
+  void set_initial_pose(double x, double y, double theta) {
+    if(this->still_not_set){
+      this->prev_pose.x = x;
+      this->prev_pose.y = y;
+      this->prev_pose.theta = theta;
+      this->still_not_set = false;
     }
   }
 
@@ -142,9 +122,10 @@ public:
     current_pose.y = prev_pose.y + velocity->linear * delta_time * sin(prev_pose.theta);
     current_pose.theta = prev_pose.theta + velocity->angular * delta_time;
     
-    ROS_INFO ("EULER: Position [x, y, theta] [%f, %f, %f]\n", current_pose.x, current_pose.y, current_pose.theta);
+    ROS_INFO ("EULER: Position [x, y, theta] [%f, %f, %f]", current_pose.x, current_pose.y, current_pose.theta);
     //ROS_INFO ("EULER - iniz: Position [x, y, theta] [%f, %f, %f]\n", current_pose.x + 0.832142, current_pose.y - 0.426362, current_pose.theta + 1.125859);
-    //ROS_INFO ("EULER: Delta time [%f]", delta_time);
+    ROS_INFO ("EULER: Delta time [%f] prev_theta [%f]", delta_time, prev_pose.theta);
+    
     prev_pose.x = current_pose.x;
     prev_pose.y = current_pose.y;
     prev_pose.theta = current_pose.theta;
@@ -220,18 +201,19 @@ void callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotics_hw1
 
   angular_velocity_estimator(wheels_rpm, velocity);
   my_twist_stamped->publish_twist_stamped(velocity);
-  //my_skid_steering->euler_integration(velocity, msg1->header.stamp.toSec());
-  my_skid_steering->runge_kutta_integration(velocity, msg1->header.stamp.toSec());
+  my_skid_steering->set_initial_pose(msg5->pose.pose.position.x, msg5->pose.pose.position.y, msg5->pose.pose.orientation.z);
+  my_skid_steering->euler_integration(velocity, msg1->header.stamp.toSec());
+  //my_skid_steering->runge_kutta_integration(velocity, msg1->header.stamp.toSec());
   my_skid_steering->publish_odometry(velocity);
 
 
   ROS_INFO ("Their  Position [x, y, theta] [%f %f %f]", msg5->pose.pose.position.x, msg5->pose.pose.position.y, msg5->pose.pose.orientation.z);
   /*
   ROS_INFO ("Their linear velocity is  : [%f]", msg5->twist.twist.linear.x);
-  ROS_INFO ("My linear velocity is     : [%f]\n", velocity->linear);  
+  ROS_INFO ("My linear velocity is     : [%f]\n", velocity->linear);  */
   ROS_INFO ("Their angular velocity is : [%f]", msg5->twist.twist.angular.z);
   ROS_INFO ("My angular velocity is    : [%f]\n", velocity->angular);
-  */
+  
   
 }
 
@@ -264,3 +246,43 @@ int main(int argc, char** argv) {
 
     return 0;
 }
+
+
+
+
+
+
+/*
+* DEPRECATA get_initial_pose perché nun me piace
+
+ void get_initial_pose(double *x, double *y, double *theta) {
+    initial_pose_shared = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/gt_pose", skid_steering_node);
+    
+    if (initial_pose_shared != NULL) {
+      initial_pose = *initial_pose_shared;
+
+      tf::Quaternion q(
+        initial_pose.pose.orientation.x,
+        initial_pose.pose.orientation.y,
+        initial_pose.pose.orientation.z,
+        initial_pose.pose.orientation.w
+      );
+      
+      tf::Matrix3x3 m(q);
+      m.getRPY(*std::unique_ptr<double>(new double),
+               *std::unique_ptr<double>(new double),
+               *theta);
+               
+
+      *x = initial_pose.pose.position.x;
+      *y = initial_pose.pose.position.y;
+
+      *x = 0;
+      *y = 0;
+      *theta = 0;
+
+      ROS_INFO("Initial pose: [%f, %f, %f]", *x, *y, *theta);
+  
+    }
+  }
+*/
