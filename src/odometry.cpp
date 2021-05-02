@@ -48,15 +48,6 @@ public:
     geometry_msgs::TwistStamped twist_stamped;
 
     twist_stamped.header.stamp = ros::Time::now();
-    /* 
-    * Se stai scorrendo, fermati a leggere questo commento. Per favore.
-    * Sono le 23.36 di un lunedì sera e sto cercando sul webbe cosa siano il frame_id e il child_frame_id.
-    * Purtroppo non ho trovato nulla di rilevante. Per questo motivo, sto scrivendo questo commento il cui unico 
-    * scopo è quello di chiederti: il seguente frame_id, secondo te, è settato correttamente? 
-    * Grazie per la risp <3
-    * 
-    * Io non ti conosco
-    */
     twist_stamped.header.frame_id = "twist_stamped";
 
     twist_stamped.twist.linear.x = velocity->linear;
@@ -121,10 +112,8 @@ public:
     current_pose.x = prev_pose.x + velocity->linear * delta_time * cos(prev_pose.theta);
     current_pose.y = prev_pose.y + velocity->linear * delta_time * sin(prev_pose.theta);
     current_pose.theta = prev_pose.theta + velocity->angular * delta_time;
-    
-    ROS_INFO ("EULER: Position [x, y, theta] [%f, %f, %f]", current_pose.x, current_pose.y, current_pose.theta);
-    //ROS_INFO ("EULER - iniz: Position [x, y, theta] [%f, %f, %f]\n", current_pose.x + 0.832142, current_pose.y - 0.426362, current_pose.theta + 1.125859);
-    ROS_INFO ("EULER: Delta time [%f] prev_theta [%f]", delta_time, prev_pose.theta);
+
+    ROS_INFO ("EULER Position [x, y, theta] [%f, %f, %f]", current_pose.x, current_pose.y, current_pose.theta);
     
     prev_pose.x = current_pose.x;
     prev_pose.y = current_pose.y;
@@ -138,8 +127,7 @@ public:
     current_pose.y = prev_pose.y + velocity->linear * delta_time * sin(prev_pose.theta + ((velocity->angular * delta_time) / 2 ));
     current_pose.theta = prev_pose.theta + velocity->angular * delta_time;
 
-    // ROS_INFO("RK: Delta time [%f]", delta_time);
-    ROS_INFO("RK: Position [x, y, theta] [%f, %f, %f]\n", current_pose.x, current_pose.y, current_pose.theta);
+    ROS_INFO("RUKKA Position [x, y, theta] [%f, %f, %f]", current_pose.x, current_pose.y, current_pose.theta);
 
     prev_pose.x = current_pose.x;
     prev_pose.y = current_pose.y;
@@ -172,6 +160,17 @@ public:
     skid_steering_pub.publish(odometry);
   }
 
+  double get_theta_from_quaternion(tf::Quaternion q) {
+    double theta;
+  
+    tf::Matrix3x3 m(q);  
+    m.getRPY(*std::unique_ptr<double>(new double),
+             *std::unique_ptr<double>(new double),
+              theta);
+
+    return theta;
+  } 
+
 };
 
 void angular_velocity_estimator(Wheels_rpm *rpm, Velocity *velocity){
@@ -199,22 +198,30 @@ void callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotics_hw1
   wheels_rpm->rl = msg3->rpm;
   wheels_rpm->rr = msg4->rpm;
 
+  tf::Quaternion q(
+        msg5->pose.pose.orientation.x,
+        msg5->pose.pose.orientation.y,
+        msg5->pose.pose.orientation.z,
+        msg5->pose.pose.orientation.w
+  );
+
+  double theta = my_skid_steering->get_theta_from_quaternion(q);
+  
   angular_velocity_estimator(wheels_rpm, velocity);
   my_twist_stamped->publish_twist_stamped(velocity);
-  my_skid_steering->set_initial_pose(msg5->pose.pose.position.x, msg5->pose.pose.position.y, msg5->pose.pose.orientation.z);
+  my_skid_steering->set_initial_pose(msg5->pose.pose.position.x, msg5->pose.pose.position.y, theta);
   my_skid_steering->euler_integration(velocity, msg1->header.stamp.toSec());
-  //my_skid_steering->runge_kutta_integration(velocity, msg1->header.stamp.toSec());
+  my_skid_steering->runge_kutta_integration(velocity, msg1->header.stamp.toSec());
   my_skid_steering->publish_odometry(velocity);
 
 
-  ROS_INFO ("Their  Position [x, y, theta] [%f %f %f]", msg5->pose.pose.position.x, msg5->pose.pose.position.y, msg5->pose.pose.orientation.z);
+  ROS_INFO ("Their  Position [x, y, theta] [%f %f %f]\n", msg5->pose.pose.position.x, msg5->pose.pose.position.y, theta);
   /*
   ROS_INFO ("Their linear velocity is  : [%f]", msg5->twist.twist.linear.x);
-  ROS_INFO ("My linear velocity is     : [%f]\n", velocity->linear);  */
+  ROS_INFO ("My linear velocity is     : [%f]\n", velocity->linear);  
   ROS_INFO ("Their angular velocity is : [%f]", msg5->twist.twist.angular.z);
   ROS_INFO ("My angular velocity is    : [%f]\n", velocity->angular);
-  
-  
+  */  
 }
 
 int main(int argc, char** argv) {
