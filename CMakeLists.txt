@@ -11,6 +11,11 @@ find_package(catkin REQUIRED COMPONENTS
   robotics_hw1
   message_filters
   nav_msgs
+  roscpp 
+  std_msgs 
+  tf 
+  tf2 
+  tf2_ros 
 )
 
 ## System dependencies are found with CMake's conventions
