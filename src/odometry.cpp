@@ -180,54 +180,29 @@ class tf_sub_pub {
 public:
 
   tf_sub_pub() {
-    tf_sub = tf_node.subscribe("/scout_odom", 500, &tf_sub_pub::callback0, this); 
-    // cambiare con nostro publisher di odometry
-    gt_sub = second_node.subscribe("/gt_pose", 1000, &tf_sub_pub::callback1, this);  // need 2 subscriber objects
-  } 
-
-
-  void callback0(const nav_msgs::Odometry::ConstPtr& msg) {
+    tf_sub = tf_node.subscribe("/Odometry", 500, &tf_sub_pub::callback, this); 
     
-    ROS_INFO ("OKKKK BELLA POSE SODIGSNDFIGBDÈS : [%f]\n\n\n\n", msg->pose.pose.position.x);
-    transform.setOrigin( tf::Vector3(pos_x, pos_y, pos_z) ); 
-    tf::Quaternion q(or_x, or_y, or_z, or_w);  //invece che questi, ci va msg -> ecc.
-    // q.setRPY(0, 0, 0);
-    transform.setRotation(q);
-    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "odom", "world"));
-
-  }
- 
- 
-  void callback1(const geometry_msgs::PoseStamped::ConstPtr& msg) {
-    // NOTE: REMEBER IN DEBUGGING THAT (DUE TO OCCLUTION) GT_POSE SPORADICALLY 
-    // DOESN'T PUBLISH, SO THIS CALLBACK DOESN'T GET CALLED 
-
-    pos_x = msg->pose.position.x;
-    pos_y = msg->pose.position.y;
-    pos_z = msg->pose.position.z;
-    or_x = msg->pose.orientation.x; 
-    or_y = msg->pose.orientation.y; 
-    or_z = msg->pose.orientation.z; 
-    or_w = msg->pose.orientation.w; 
   } 
+
+
+  void callback(const nav_msgs::Odometry::ConstPtr& msg) {
+    
+    transform.setOrigin( tf::Vector3(msg->pose.pose.position.x, msg->pose.pose.position.y, 0.0) ); 
+    tf::Quaternion q(msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, 
+    msg->pose.pose.orientation.z, msg->pose.pose.orientation.w);  
+    transform.setRotation(q);
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "odom", "base_link"));
+  }
+
 
 private:
   ros::NodeHandle tf_node; 
-  ros::NodeHandle second_node; 
   tf::TransformBroadcaster br;
   tf::Transform transform;
   ros::Subscriber tf_sub;  
-  ros::Subscriber gt_sub; 
-
-  float pos_x; // for positions of gt_pose
-  float pos_y;
-  float pos_z;
-  float or_x;  // for orientations of gt_pose
-  float or_y;
-  float or_z;
-  float or_w;
 
 };
+
 
 void angular_velocity_estimator(Wheels_rpm *rpm, Velocity *velocity){
 
