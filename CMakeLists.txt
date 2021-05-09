@@ -9,6 +9,7 @@ project(project_robotics)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   robotics_hw1
+  dynamic_reconfigure
   message_filters
   nav_msgs
 )
@@ -84,6 +85,9 @@ find_package(catkin REQUIRED COMPONENTS
 #   cfg/DynReconf1.cfg
 #   cfg/DynReconf2.cfg
 # )
+generate_dynamic_reconfigure_options(
+  cfg/dynrec.cfg
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -97,8 +101,8 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES project_robotics
-  CATKIN_DEPENDS robotics_hw1
-  DEPENDS system_lib
+  CATKIN_DEPENDS robotics_hw1 dynamic_reconfigure
+#  DEPENDS system_lib
 )
 
 ###########
@@ -108,8 +112,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
-  ${catkin_INCLUDE_DIRS}
+  include ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -126,11 +129,11 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/project_robotics_node.cpp)
+
 add_executable(odometry src/odometry.cpp)
 add_dependencies(odometry ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(odometry
-  ${catkin_LIBRARIES}
-)
+target_link_libraries(odometry ${catkin_LIBRARIES})
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use

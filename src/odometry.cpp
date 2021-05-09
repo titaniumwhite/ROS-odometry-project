@@ -7,6 +7,8 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/tf.h>
 #include <math.h>
+#include <project_robotics/dynrecConfig.h>
+#include <dynamic_reconfigure/server.h>
 
 #define GEAR_RATIO 0.02615575                 
 #define RPM_TO_RADS 0.104719755
@@ -93,9 +95,10 @@ public:
     velocity.linear = 0;
     velocity.angular = 0;
 
-    still_not_set = true;
-    
     prev_time = 0;
+
+    method = 0;
+    still_not_set = true;
   }
 
   void set_initial_pose(double x, double y, double theta) {
@@ -171,6 +174,15 @@ public:
     return theta;
   } 
 
+  void set_integration_method(int m) {
+    if (m == 0 || m == 1) method = m;
+  }
+
+  void select_integration(Velocity *velocity, double current_time) {
+    if (method == 0) euler_integration(velocity, current_time);
+    else if (method == 1) runge_kutta_integration(velocity, current_time);
+  }
+
 };
 
 void angular_velocity_estimator(Wheels_rpm *rpm, Velocity *velocity){
@@ -210,8 +222,7 @@ void callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotics_hw1
   angular_velocity_estimator(wheels_rpm, velocity);
   my_twist_stamped->publish_twist_stamped(velocity);
   my_skid_steering->set_initial_pose(msg5->pose.pose.position.x, msg5->pose.pose.position.y, theta);
-  my_skid_steering->euler_integration(velocity, msg1->header.stamp.toSec());
-  my_skid_steering->runge_kutta_integration(velocity, msg1->header.stamp.toSec());
+  my_skid_steering->select_integration(velocity, msg1->header.stamp.toSec());
   my_skid_steering->publish_odometry(velocity);
 
 
@@ -222,6 +233,18 @@ void callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotics_hw1
   ROS_INFO ("Their angular velocity is : [%f]", msg5->twist.twist.angular.z);
   ROS_INFO ("My angular velocity is    : [%f]\n", velocity->angular);
   */  
+}
+
+void dynrec_callback(project_robotics::dynrecConfig &config, uint32_t level, skid_steering *my_skid_steering) {
+  /*
+  * /// Usage of dynamic reconfiguration ///
+  *     While running the code, you can reconfigure the integration method by typing the following command
+  *     Euler -> 'rosrun dynamic_reconfigure dynparam set /odometry integration_method 0'
+  *     Rukka -> 'rosrun dynamic_reconfigure dynparam set /odometry integration_method 1'
+  */
+  
+  my_skid_steering->set_integration_method(config.integration_method);
+  ROS_INFO("dynRec request %d", config.integration_method);
 }
 
 int main(int argc, char** argv) {
@@ -236,6 +259,11 @@ int main(int argc, char** argv) {
     my_skid_steering = new skid_steering();    
 
     ros::NodeHandle sync_node;
+
+    dynamic_reconfigure::Server<project_robotics::dynrecConfig> server;
+    dynamic_reconfigure::Server<project_robotics::dynrecConfig>::CallbackType f; 
+    f = boost::bind(&dynrec_callback, _1, _2, my_skid_steering);
+    server.setCallback(f);
 
     message_filters::Subscriber<robotics_hw1::MotorSpeed> sub1(sync_node, "motor_speed_fl", 1);
     message_filters::Subscriber<robotics_hw1::MotorSpeed> sub2(sync_node, "motor_speed_fr", 1);
