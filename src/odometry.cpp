@@ -6,6 +6,7 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/tf.h>
+#include <tf/transform_broadcaster.h>
 #include <math.h>
 #include <project_robotics/dynrecConfig.h>
 #include <dynamic_reconfigure/server.h>
@@ -101,6 +102,7 @@ public:
     still_not_set = true;
   }
 
+
   void set_initial_pose(double x, double y, double theta) {
     if(this->still_not_set){
       this->prev_pose.x = x;
@@ -185,6 +187,35 @@ public:
 
 };
 
+class tf_sub_pub {
+
+public:
+
+  tf_sub_pub() {
+    tf_sub = tf_node.subscribe("/Odometry", 500, &tf_sub_pub::callback, this); 
+    
+  } 
+
+
+  void callback(const nav_msgs::Odometry::ConstPtr& msg) {
+    
+    transform.setOrigin( tf::Vector3(msg->pose.pose.position.x, msg->pose.pose.position.y, 0.0) ); 
+    tf::Quaternion q(msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, 
+    msg->pose.pose.orientation.z, msg->pose.pose.orientation.w);  
+    transform.setRotation(q);
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "odom", "base_link"));
+  }
+
+
+private:
+  ros::NodeHandle tf_node; 
+  tf::TransformBroadcaster br;
+  tf::Transform transform;
+  ros::Subscriber tf_sub;  
+
+};
+
+
 void angular_velocity_estimator(Wheels_rpm *rpm, Velocity *velocity){
 
   // get an average left wheels rpm, also taking into account the reduction gear
@@ -256,7 +287,9 @@ int main(int argc, char** argv) {
     my_twist_stamped = new twist_stamped();
 
     skid_steering *my_skid_steering;
-    my_skid_steering = new skid_steering();    
+    my_skid_steering = new skid_steering();
+
+    tf_sub_pub my_tf_sub_pub;    
 
     ros::NodeHandle sync_node;
 

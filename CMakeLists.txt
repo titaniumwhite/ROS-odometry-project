@@ -12,6 +12,11 @@ find_package(catkin REQUIRED COMPONENTS
   dynamic_reconfigure
   message_filters
   nav_msgs
+  roscpp 
+  std_msgs 
+  tf 
+  tf2 
+  tf2_ros 
 )
 
 ## System dependencies are found with CMake's conventions
