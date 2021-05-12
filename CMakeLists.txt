@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf 
   tf2 
   tf2_ros 
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -52,11 +53,10 @@ add_message_files(FILES
 )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  Reset.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -109,7 +109,7 @@ generate_dynamic_reconfigure_options(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES project_robotics
-  CATKIN_DEPENDS robotics_hw1 dynamic_reconfigure
+  CATKIN_DEPENDS robotics_hw1 dynamic_reconfigure message_runtime
 #  DEPENDS system_lib
 )
 
@@ -141,6 +141,7 @@ include_directories(
 add_executable(odometry src/odometry.cpp)
 add_dependencies(odometry ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 #add_dependencies(odometry project_robotics_generate_messages_cpp)
+#add_dependencies(reset ${catkin_EXPORTED_TARGETS})
 target_link_libraries(odometry ${catkin_LIBRARIES})
 
 ## Rename C++ executable without prefix

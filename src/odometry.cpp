@@ -11,6 +11,7 @@
 #include <math.h>
 #include <project_robotics/dynrecConfig.h>
 #include <dynamic_reconfigure/server.h>
+#include <project_robotics/Reset.h>
 
 #define GEAR_RATIO 0.02615575                 
 #define RPM_TO_RADS 0.104719755
@@ -235,7 +236,7 @@ void angular_velocity_estimator(Wheels_rpm *rpm, Velocity *velocity){
 }
 
 
-void callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotics_hw1::MotorSpeed::ConstPtr& msg2,
+void sync_callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotics_hw1::MotorSpeed::ConstPtr& msg2,
               const robotics_hw1::MotorSpeed::ConstPtr& msg3, const robotics_hw1::MotorSpeed::ConstPtr& msg4, 
               const nav_msgs::Odometry::ConstPtr& msg5, Wheels_rpm *wheels_rpm, Velocity *velocity, 
               twist_stamped *my_twist_stamped, skid_steering *my_skid_steering) {
@@ -312,7 +313,7 @@ int main(int argc, char** argv) {
                                       robotics_hw1::MotorSpeed, robotics_hw1::MotorSpeed, 
                                       nav_msgs::Odometry> sync(sub1, sub2, sub3, sub4, sub5, 10);
     
-    sync.registerCallback(boost::bind(&callback, _1, _2, _3, _4, _5, &wheels_rpm, &velocity, my_twist_stamped, my_skid_steering));
+    sync.registerCallback(boost::bind(&sync_callback, _1, _2, _3, _4, _5, &wheels_rpm, &velocity, my_twist_stamped, my_skid_steering));
 
     ros::spin();
 
