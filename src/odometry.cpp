@@ -5,6 +5,7 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <project_robotics/CustomOdometry.h>
 #include <tf/tf.h>
 #include <tf/transform_broadcaster.h>
 #include <math.h>
@@ -74,11 +75,13 @@ private:
 
   double prev_time;
 
-  int method; // 0 for Eurler, 1 for Runge-Kutta
+  int method; // 0 for Euler, 1 for Runge-Kutta
   bool still_not_set; // to avoid setting initial pose repeatedly
 
   ros::NodeHandle skid_steering_node;
-  ros::Publisher skid_steering_pub;
+  ros::Publisher odometry_pub; // publish odometry
+  ros::Publisher custom_odometry_pub; // publish custom odometry
+
   
   boost::shared_ptr<geometry_msgs::PoseStamped const> initial_pose_shared;
   geometry_msgs::PoseStamped initial_pose;
@@ -87,7 +90,8 @@ public:
 
   skid_steering() {
 
-    skid_steering_pub = skid_steering_node.advertise<nav_msgs::Odometry>("/Odometry", 50);
+    odometry_pub = skid_steering_node.advertise<nav_msgs::Odometry>("/Odometry", 50);
+    custom_odometry_pub = skid_steering_node.advertise<project_robotics::CustomOdometry>("/custom_odometry", 50);
 
     current_pose.x = 0;
     current_pose.y = 0;
@@ -142,6 +146,7 @@ public:
 
   void publish_odometry(Velocity *velocity) {
     nav_msgs::Odometry odometry;
+    project_robotics::CustomOdometry custom_odometry;
 
     odometry.header.stamp = ros::Time::now();
     odometry.header.frame_id = "odom";
@@ -159,10 +164,15 @@ public:
     odometry.twist.twist.angular.y = 0;
     odometry.twist.twist.angular.z = velocity->angular;
 
+    custom_odometry.odom = odometry;
+    if (method == 0) custom_odometry.method.data = "euler";
+    else if (method == 1) custom_odometry.method.data = "rk";
+
     // ROS_INFO ("My linear  velocity is : [%f]", odometry.twist.twist.linear.x);  
     // ROS_INFO ("My angular velocity is : [%f]\n", odometry.twist.twist.angular.z);
 
-    skid_steering_pub.publish(odometry);
+    odometry_pub.publish(odometry);
+    custom_odometry_pub.publish(custom_odometry);
   }
 
   double get_theta_from_quaternion(tf::Quaternion q) {
@@ -188,30 +198,24 @@ public:
 };
 
 class tf_sub_pub {
-
-public:
-
-  tf_sub_pub() {
-    tf_sub = tf_node.subscribe("/Odometry", 500, &tf_sub_pub::callback, this); 
-    
-  } 
-
-
-  void callback(const nav_msgs::Odometry::ConstPtr& msg) {
-    
-    transform.setOrigin( tf::Vector3(msg->pose.pose.position.x, msg->pose.pose.position.y, 0.0) ); 
-    tf::Quaternion q(msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, 
-    msg->pose.pose.orientation.z, msg->pose.pose.orientation.w);  
-    transform.setRotation(q);
-    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "odom", "base_link"));
-  }
-
-
 private:
   ros::NodeHandle tf_node; 
   tf::TransformBroadcaster br;
   tf::Transform transform;
-  ros::Subscriber tf_sub;  
+  ros::Subscriber tf_sub; 
+
+public:
+  tf_sub_pub() {
+    tf_sub = tf_node.subscribe("/Odometry", 500, &tf_sub_pub::callback, this);  
+  } 
+
+  void callback(const nav_msgs::Odometry::ConstPtr& msg) {
+    transform.setOrigin( tf::Vector3(msg->pose.pose.position.x, msg->pose.pose.position.y, 0.0) ); 
+    tf::Quaternion q(msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, 
+                     msg->pose.pose.orientation.z, msg->pose.pose.orientation.w);  
+    transform.setRotation(q);
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "odom", "base_link"));
+  }
 
 };
 

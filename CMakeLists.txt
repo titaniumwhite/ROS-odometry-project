@@ -47,9 +47,9 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-#add_message_files(FILES
-#  MotorSpeed.msg
-#)
+add_message_files(FILES
+  CustomOdometry.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -66,10 +66,13 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  nav_msgs
+  std_msgs
+  geometry_msgs
+  #project_robotics  # Or other packages containing msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -137,6 +140,7 @@ include_directories(
 
 add_executable(odometry src/odometry.cpp)
 add_dependencies(odometry ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(odometry project_robotics_generate_messages_cpp)
 target_link_libraries(odometry ${catkin_LIBRARIES})
 
 ## Rename C++ executable without prefix
