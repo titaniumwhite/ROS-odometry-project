@@ -82,7 +82,7 @@ private:
   ros::NodeHandle skid_steering_node;
   ros::Publisher odometry_pub; // publish odometry
   ros::Publisher custom_odometry_pub; // publish custom odometry
-
+  ros::ServiceServer service = skid_steering_node.advertiseService("reset", &skid_steering::reset_callback);
   
   boost::shared_ptr<geometry_msgs::PoseStamped const> initial_pose_shared;
   geometry_msgs::PoseStamped initial_pose;
@@ -194,6 +194,15 @@ public:
   void select_integration(Velocity *velocity, double current_time) {
     if (method == 0) euler_integration(velocity, current_time);
     else if (method == 1) runge_kutta_integration(velocity, current_time);
+  }
+
+  bool reset_callback(project_robotics::Reset::Request &req, project_robotics::Reset::Response &res) {
+    /*this.current_pose.x = 0;
+    this.current_pose.y = 0;
+*/
+    res.ret = 0;
+
+    return true;
   }
 
 };
