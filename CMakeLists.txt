@@ -56,6 +56,7 @@ add_message_files(FILES
 add_service_files(
   FILES
   Reset.srv
+  Given_reset.srv
 )
 
 ## Generate actions in the 'action' folder
