@@ -199,8 +199,8 @@ public:
 
   bool reset_callback(project_robotics::Reset::Request &req, project_robotics::Reset::Response &res) {
     
-    this->current_pose.x = 0;
-    this->current_pose.y = 0;
+    this->prev_pose.x = 0;
+    this->prev_pose.y = 0;
 
     return true;
   }
