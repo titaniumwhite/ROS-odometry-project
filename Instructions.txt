@@ -1,1 +1,48 @@
-hola
+xxxxxxxx    Gabriele De Santis
+10632035    Alessandro Gaeta
+
+***Small description of the files inside the archive TODO***
+In the main file which is odometry.cpp (inside the src folder) we created three classes: 
+1) Class twist_stamped, a class with a dedicated node in order to publish our twist_stamped message.
+
+2) Class skid_steering, the "body of the project", inside this class we defined the two functions 
+ euler_integration and runge_kutta_integration in order to compute the odometry with the skid steering
+ approximation kinematics. This class has its own node "skid_steering_node" ( we chose
+ to assign a total of 4 nodes, one for each class and one inside the main, because we
+ think that its the best way to obtain order and semplicity in reading the code). Inside thishis class
+ we also defined two publishers, one in order to publish our computed odometry message and the
+ other for the requested custom message. Inside this class we also defined the two services, we 
+ chose to implement them here because we think that its the best way to communicate and modify
+ our odometry which is also computed inside this class. ***TODO FUNCION SET INITIAL POSE CON PARAMETER***
+ We then defined a function in order to publish our odometry, and a function with operates a 
+ transformation from quaternions to theta, this because the nav_msgs poses orientation works
+ with quaternions.
+
+ 3) Class tf_sub_pub
+
+
+***SERVICES***
+In order to call the service which resets odometry to (0, 0) and keeps unaltered the angle theta:
+$rosservice call reset
+
+In order to call the service which resets odometry to the given values (x, y, theta):
+$rosservice call given_reset x y theta
+
+
+***Name and meanind of the ROS parameters TODO***
+
+***Structure of the TF tree TODO***
+We defined a Transformation Frame from /odom to /base_link using the odometry that we computed.
+We chose this kind of TF because, according to us, it was the best choice in order to check that
+everything was working fine looking from ROS tools such as rviz, this because we could simply
+and directly compare our data with the manufacturers odometry data, without any sporadic
+unavailabilty of the data.
+
+***Structure of the custom message TODO***
+
+***Description of how to start/use the nodes TODO***
+
+***Info you think are important/interesting TODO***
+***Profs suggerimento: In particular: quali nodi sono stati creati, come comunicano tra di loro 
+e con i dati forniti, che parametri usano, che servizi espongon ecc." TODO***
+

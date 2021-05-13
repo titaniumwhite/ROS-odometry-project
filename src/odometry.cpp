@@ -76,7 +76,9 @@ private:
   Velocity velocity;
 
   double prev_time;
+
   int method; // 0 for Euler, 1 for Runge-Kutta
+  bool still_not_set; // to avoid setting initial pose repeatedly
 
   ros::NodeHandle skid_steering_node;
   ros::Publisher odometry_pub; // publish odometry
@@ -104,22 +106,23 @@ public:
     velocity.angular = 0;
 
     prev_time = 0;
+
     method = 0;
+    still_not_set = true;
   }
 
 
-  void set_initial_pose() {
-    std::vector<double> pose;
-    skid_steering_node.getParam("/initial_pose", pose);
-
-    prev_pose.x = pose[0];
-    prev_pose.y = pose[1];
-    prev_pose.theta = pose[2];
+  void set_initial_pose(double x, double y, double theta) {
+    if(this->still_not_set){
+      this->prev_pose.x = x;
+      this->prev_pose.y = y;
+      this->prev_pose.theta = theta;
+      this->still_not_set = false;
+    }
   }
 
   void euler_integration(Velocity *velocity, double current_time) {
     double delta_time = current_time - prev_time;
-
     current_pose.x = prev_pose.x + velocity->linear * delta_time * cos(prev_pose.theta);
     current_pose.y = prev_pose.y + velocity->linear * delta_time * sin(prev_pose.theta);
     current_pose.theta = prev_pose.theta + velocity->angular * delta_time;
@@ -169,6 +172,9 @@ public:
     custom_odometry.odom = odometry;
     if (method == 0) custom_odometry.method.data = "euler";
     else if (method == 1) custom_odometry.method.data = "rk";
+
+    // ROS_INFO ("My linear  velocity is : [%f]", odometry.twist.twist.linear.x);  
+    // ROS_INFO ("My angular velocity is : [%f]\n", odometry.twist.twist.angular.z);
 
     odometry_pub.publish(odometry);
     custom_odometry_pub.publish(custom_odometry);
@@ -246,6 +252,7 @@ void angular_velocity_estimator(Wheels_rpm *rpm, Velocity *velocity){
   double left_avg_velocity  = left_wheels_avg_rpm  * RADIUS * RPM_TO_RADS;
   double right_avg_velocity = right_wheels_avg_rpm * RADIUS * RPM_TO_RADS;
 
+
   velocity->linear  = ( left_avg_velocity + right_avg_velocity ) / (2.0);
   velocity->angular = ( right_avg_velocity - left_avg_velocity ) / (APPARENT_BASELINE);                                                              
 }
@@ -272,10 +279,18 @@ void sync_callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotic
   
   angular_velocity_estimator(wheels_rpm, velocity);
   my_twist_stamped->publish_twist_stamped(velocity);
+  my_skid_steering->set_initial_pose(msg5->pose.pose.position.x, msg5->pose.pose.position.y, theta);
   my_skid_steering->select_integration(velocity, msg1->header.stamp.toSec());
   my_skid_steering->publish_odometry(velocity);
 
-  //ROS_INFO ("Bag  Position [x, y, theta] [%f %f %f]\n", msg5->pose.pose.position.x, msg5->pose.pose.position.y, theta);
+
+  ROS_INFO ("Their  Position [x, y, theta] [%f %f %f]\n", msg5->pose.pose.position.x, msg5->pose.pose.position.y, theta);
+  /*
+  ROS_INFO ("Their linear velocity is  : [%f]", msg5->twist.twist.linear.x);
+  ROS_INFO ("My linear velocity is     : [%f]\n", velocity->linear);  
+  ROS_INFO ("Their angular velocity is : [%f]", msg5->twist.twist.angular.z);
+  ROS_INFO ("My angular velocity is    : [%f]\n", velocity->angular);
+  */  
 }
 
 void dynrec_callback(project_robotics::dynrecConfig &config, uint32_t level, skid_steering *my_skid_steering) {
@@ -300,7 +315,6 @@ int main(int argc, char** argv) {
 
     skid_steering *my_skid_steering;
     my_skid_steering = new skid_steering();
-    my_skid_steering->set_initial_pose();
 
     tf_sub_pub my_tf_sub_pub;    
 
