@@ -327,3 +327,43 @@ int main(int argc, char** argv) {
 
     return 0;
 }
+
+
+
+
+
+
+/*
+* DEPRECATA get_initial_pose perché nun me piace
+
+ void get_initial_pose(double *x, double *y, double *theta) {
+    initial_pose_shared = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/gt_pose", skid_steering_node);
+    
+    if (initial_pose_shared != NULL) {
+      initial_pose = *initial_pose_shared;
+
+      tf::Quaternion q(
+        initial_pose.pose.orientation.x,
+        initial_pose.pose.orientation.y,
+        initial_pose.pose.orientation.z,
+        initial_pose.pose.orientation.w
+      );
+      
+      tf::Matrix3x3 m(q);
+      m.getRPY(*std::unique_ptr<double>(new double),
+               *std::unique_ptr<double>(new double),
+               *theta);
+               
+
+      *x = initial_pose.pose.position.x;
+      *y = initial_pose.pose.position.y;
+
+      *x = 0;
+      *y = 0;
+      *theta = 0;
+
+      ROS_INFO("Initial pose: [%f, %f, %f]", *x, *y, *theta);
+  
+    }
+  }
+*/
