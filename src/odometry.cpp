@@ -12,6 +12,7 @@
 #include <project_robotics/dynrecConfig.h>
 #include <dynamic_reconfigure/server.h>
 #include <project_robotics/Reset.h>
+#include <project_robotics/Given_reset.h>
 
 #define GEAR_RATIO 0.02615575                 
 #define RPM_TO_RADS 0.104719755
@@ -81,6 +82,7 @@ private:
   ros::Publisher odometry_pub; // publish odometry
   ros::Publisher custom_odometry_pub; // publish custom odometry
   ros::ServiceServer reset_service;
+  ros::ServiceServer given_pose_reset_service;
 
   boost::shared_ptr<geometry_msgs::PoseStamped const> initial_pose_shared;
   geometry_msgs::PoseStamped initial_pose;
@@ -92,6 +94,7 @@ public:
     odometry_pub = skid_steering_node.advertise<nav_msgs::Odometry>("/Odometry", 50);
     custom_odometry_pub = skid_steering_node.advertise<project_robotics::CustomOdometry>("/custom_odometry", 50);
     reset_service = skid_steering_node.advertiseService("reset", &skid_steering::reset_callback, this);
+    given_pose_reset_service = skid_steering_node.advertiseService("given_reset", &skid_steering::given_pose_reset_callback, this);
 
     current_pose.x = 0;
     current_pose.y = 0;
@@ -193,8 +196,18 @@ public:
 
   bool reset_callback(project_robotics::Reset::Request &req, project_robotics::Reset::Response &res) {
     
-    this->current_pose.x = 0;
-    this->current_pose.y = 0;
+    this->prev_pose.x = 0;
+    this->prev_pose.y = 0;
+
+    return true;
+  }
+
+  bool given_pose_reset_callback(project_robotics::Given_reset::Request &req, 
+                                 project_robotics::Given_reset::Response &res) {
+    
+    this->prev_pose.x = req.x;
+    this->prev_pose.y = req.y;
+    this->prev_pose.theta = req.theta;
 
     return true;
   }
