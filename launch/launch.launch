@@ -1,0 +1,6 @@
+<launch>
+
+<rosparam param="initial_pose"> [0, 0, 0] </rosparam>
+<node pkg="project_robotics" type="odometry" name="my_odometry" output="screen"/>
+
+</launch>
