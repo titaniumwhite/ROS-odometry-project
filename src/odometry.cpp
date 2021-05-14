@@ -123,8 +123,6 @@ public:
     current_pose.x = prev_pose.x + velocity->linear * delta_time * cos(prev_pose.theta);
     current_pose.y = prev_pose.y + velocity->linear * delta_time * sin(prev_pose.theta);
     current_pose.theta = prev_pose.theta + velocity->angular * delta_time;
-
-    ROS_INFO ("EULER Position [x, y, theta] [%f, %f, %f]", current_pose.x, current_pose.y, current_pose.theta);
     
     prev_pose.x = current_pose.x;
     prev_pose.y = current_pose.y;
@@ -137,8 +135,6 @@ public:
     current_pose.x = prev_pose.x + velocity->linear * delta_time * cos(prev_pose.theta + ((velocity->angular * delta_time) / 2 ));
     current_pose.y = prev_pose.y + velocity->linear * delta_time * sin(prev_pose.theta + ((velocity->angular * delta_time) / 2 ));
     current_pose.theta = prev_pose.theta + velocity->angular * delta_time;
-
-    ROS_INFO("RUKKA Position [x, y, theta] [%f, %f, %f]", current_pose.x, current_pose.y, current_pose.theta);
 
     prev_pose.x = current_pose.x;
     prev_pose.y = current_pose.y;
@@ -274,20 +270,10 @@ void sync_callback(const robotics_hw1::MotorSpeed::ConstPtr& msg1, const robotic
   my_twist_stamped->publish_twist_stamped(velocity);
   my_skid_steering->select_integration(velocity, msg1->header.stamp.toSec());
   my_skid_steering->publish_odometry(velocity);
-
-  //ROS_INFO ("Bag  Position [x, y, theta] [%f %f %f]\n", msg5->pose.pose.position.x, msg5->pose.pose.position.y, theta);
 }
 
 void dynrec_callback(project_robotics::dynrecConfig &config, uint32_t level, skid_steering *my_skid_steering) {
-  /*
-  * /// Usage of dynamic reconfiguration ///
-  *     While running the code, you can reconfigure the integration method by typing the following command
-  *     Euler -> 'rosrun dynamic_reconfigure dynparam set /odometry integration_method 0'
-  *     Rukka -> 'rosrun dynamic_reconfigure dynparam set /odometry integration_method 1'
-  */
-  
   my_skid_steering->set_integration_method(config.integration_method);
-  ROS_INFO("dynRec request %d", config.integration_method);
 }
 
 int main(int argc, char** argv) {

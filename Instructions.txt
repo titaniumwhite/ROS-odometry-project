@@ -1,4 +1,4 @@
-xxxxxxxxTODO    Gabriele De Santis
+10820992    Gabriele De Santis
 10632035    Alessandro Gaeta
 
 
@@ -19,9 +19,11 @@ In the main file which is odometry.cpp (inside the src folder) we created three 
  think that its the best way to obtain order and semplicity in reading the code). Inside this class
  we also defined two publishers, one in order to publish our computed odometry message and the
  other for the requested custom message. Inside this class we also defined the two services, we 
- chose to implement them here because we think that its the best way to communicate and modify
+ choose to implement them here because we think that it's the best way to communicate and modify
  our odometry which is also computed inside this class. Both the two publishers and the two services
- are instantiated inside the class constructor. ***TODO FUNCION SET INITIAL POSE CON PARAMETER***
+ are instantiated inside the class constructor. Furthermore, a function set the initial pose through
+ the parameter specified in the lauch file. It saves the (x, y, theta) values in a vector and then
+ assign these values to the pose of the skid_steering object. 
  We then defined a function in order to publish our odometry, and a function wich operates a 
  transformation from quaternions to theta, this because the nav_msgs poses orientation works
  with quaternions. We then defined a couple of simple functions inside the class in order to enable
@@ -64,24 +66,30 @@ computation of our velocities, and consequently with the estimation of the param
 
 
 ***INSTRUCTIONS FOR LAUNCHING THE PROGRAM***
-$roslaunch project_robotics launch.launch
+$ roslaunch project_robotics launch.launch
 This line command initializes the parameters and launches roscore and the project. The data to be 
 computed has to be provided in input from the outside (e.g. making the bag1.bag play).
 
 
-***INSTRUCTIONS FOR CALLING THE INTEGRATION METHOD SELECTOR***TODO
-
+***INSTRUCTIONS FOR CALLING THE INTEGRATION METHOD SELECTOR***
+Euler ->        $ rosrun dynamic_reconfigure dynparam set /odometry integration_method 0
+Runga Kutta ->  $ rosrun dynamic_reconfigure dynparam set /odometry integration_method 1
+As you can see, the integration method can be chosen by using an integer. Euler integration method
+corresponds to 0 and Runge Kutta integration method corresponds to 1.
+The initial integration method is Euler.
 
 ***INSTRUCTIONS FOR CALLING THE RESET SERVICES***
 In order to call the service which resets odometry to (0, 0) and keeps unaltered the angle theta:
-$rosservice call reset
+$ rosservice call reset
 
 In order to call the service which resets odometry to the given values (x, y, theta):
-$rosservice call given_reset x y theta
+$ rosservice call given_reset x y theta
 where you have to substitute <x y theta> with their values.
 
-
-***Name and meanind of the ROS parameters TODO***
+***Name and meaning of the ROS parameters***
+A ROS parameter specifies the initial pose (x, y, theta) of the robot. Since we don't have any
+constraints about the initial pose, we have choosen to set it as (0, 0, 0).
+The parameter can be changed in the launch file.
 
 ***Structure of the TF tree***
 We defined a Transformation Frame from /odom to /base_link using the odometry that we computed.
@@ -92,16 +100,11 @@ without any sporadic unavailabilty of the data.
 This transformation can simply be inspected using, among other options, the tool RVIZ, setting the
 fixed frame to odom, and then adding, "By display type" TF, under rviz.
 
-***Structure of the custom message TODO***
+***Structure of the custom message***
+The CustomOdometry message has the following structure:
+    nav_msgs/Odometry odom
+    std_msgs/String method
+The odom message contains all the odometry calculated either with Euler or Runge Kutta while method
+message specifies the integration method selected to calculate the current odometry value.
 
-***Description of how to start/use the nodes TODO*** @gabbo non so se lo vogliam fare questo, ma 
-non credo ce ne sia bisogno, penso che abbiamo scritto abbastanza.
-
-***Info you think are important/interesting TODO(facoltativo)***
-
-
-***Quali nodi sono stati creati, come comunicano tra di loro 
-e con i dati forniti, che parametri usano, che servizi espongon ecc." TODO(facoltativo)***
-@gabbo stesso discorso di prima, non so se lo vogliam fare questo, ma 
-non credo ce ne sia bisogno, penso che abbiamo scritto abbastanza.
 
