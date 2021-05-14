@@ -1,7 +1,14 @@
-xxxxxxxx    Gabriele De Santis
+xxxxxxxxTODO    Gabriele De Santis
 10632035    Alessandro Gaeta
 
-***Small description of the files inside the archive TODO***
+
+Appendix:
+We tried our best to make the code self explanatory and keep it simple and ordered.
+Here follows a brief description of the project files, some instructions in order to launch the 
+program, the services and everything needed, a description of the ROS parameters, the structure
+of the TF tree and the motivation of its choice, and the structure of the custom messages.
+
+***Small description of the files inside the archive ***
 In the main file which is odometry.cpp (inside the src folder) we created three classes: 
 1) Class twist_stamped, a class with a dedicated node in order to publish our twist_stamped message.
 
@@ -9,40 +16,92 @@ In the main file which is odometry.cpp (inside the src folder) we created three 
  euler_integration and runge_kutta_integration in order to compute the odometry with the skid steering
  approximation kinematics. This class has its own node "skid_steering_node" ( we chose
  to assign a total of 4 nodes, one for each class and one inside the main, because we
- think that its the best way to obtain order and semplicity in reading the code). Inside thishis class
+ think that its the best way to obtain order and semplicity in reading the code). Inside this class
  we also defined two publishers, one in order to publish our computed odometry message and the
  other for the requested custom message. Inside this class we also defined the two services, we 
  chose to implement them here because we think that its the best way to communicate and modify
- our odometry which is also computed inside this class. ***TODO FUNCION SET INITIAL POSE CON PARAMETER***
- We then defined a function in order to publish our odometry, and a function with operates a 
+ our odometry which is also computed inside this class. Both the two publishers and the two services
+ are instantiated inside the class constructor. ***TODO FUNCION SET INITIAL POSE CON PARAMETER***
+ We then defined a function in order to publish our odometry, and a function wich operates a 
  transformation from quaternions to theta, this because the nav_msgs poses orientation works
- with quaternions.
+ with quaternions. We then defined a couple of simple functions inside the class in order to enable
+ the "skeleton" of the dynamic reconfigure in order to select the odometry integration method, and the
+ last two functions of the class are the servers of the two services. Initially we also defined two
+ additional files in order to configure a client for each service, but while progressing with the
+ project we realized that they were superfluous, and considering the space occupied by two extra files,
+ also in terms of order of the project, we decided to remove them.
 
- 3) Class tf_sub_pub
+ 3) Class tf_sub_pub, the third class is in order to implement the TF. Choices of the determined
+ TF are discussed afterwards.
+
+We then defined three functions, the first in order to estimate the angular and linear velocity. 
+Considering the fact that we used the Skid Steering Approximation which assumes that the 4 wheeled
+robot has all wheels allways in contact with the ground, has the mass equally distributed on the four
+wheels in each instant and that the wheels on the same side have the same speed, we decided that, 
+considering the noise, the best way to estimate the velocity of the wheels of each side was to make 
+an algebraic mean over the front and rear wheel. In order to estimate the two constants that we had
+to find, we used an experimental method, the same that we used at first for the gear ratio and 
+afterwards for the apparent baseline, trying a value and computing our velocities, then comparing it 
+with the manufacturers', using the linear velocity in order to compute the gear ratio (because the 
+apparent baseline doesn't influence this velocity), and after obtaining satisfactory results with the
+first constant, moving to estimate the apparent baseline comparing the angular velocities. We mainly
+used data from the first bag, and for each "session" to try a determined value, we gathered a
+collection of experiments of at least 30 samples, number of samples that we gathered which gradually 
+increased as the values of our velocities got closer to the manufacturers', and we deemed satisfied 
+when, upon more than 100 samples, our velocities with respect to the manufacturers' where half of the 
+time lower and half of the time higher (based individually on multiple sessions, also for bag number 2).
+We chose this method because we assumed that the noise had a predominant high frequency component, and
+so getting results which where "randomly" higher or lower, considering the tiny differences in the 
+comparision, was a sufficient result for us. We checked our achievings throughout the project with
+the tool RVIZ. Our project currently reaches a maximum error, regarding the bag number 1, of around 
+15 centimeters on both the x and y axis. We then defined the callback function for the synchronization
+of the messages of the 4 wheels' rpms deriving from the data in the bag, so that afterwards this data
+could be used by our program consciously knowing that, in each instant, the 4 rpms were belonging to
+the same time instant, because, if this wasn't the case, there would have been big problems with the 
+computation of our velocities, and consequently with the estimation of the parameters.
 
 
-***SERVICES***
+
+
+***INSTRUCTIONS FOR LAUNCHING THE PROGRAM***
+$roslaunch project_robotics launch.launch
+This line command initializes the parameters and launches roscore and the project. The data to be 
+computed has to be provided in input from the outside (e.g. making the bag1.bag play).
+
+
+***INSTRUCTIONS FOR CALLING THE INTEGRATION METHOD SELECTOR***TODO
+
+
+***INSTRUCTIONS FOR CALLING THE RESET SERVICES***
 In order to call the service which resets odometry to (0, 0) and keeps unaltered the angle theta:
 $rosservice call reset
 
 In order to call the service which resets odometry to the given values (x, y, theta):
 $rosservice call given_reset x y theta
+where you have to substitute <x y theta> with their values.
 
 
 ***Name and meanind of the ROS parameters TODO***
 
-***Structure of the TF tree TODO***
+***Structure of the TF tree***
 We defined a Transformation Frame from /odom to /base_link using the odometry that we computed.
-We chose this kind of TF because, according to us, it was the best choice in order to check that
-everything was working fine looking from ROS tools such as rviz, this because we could simply
-and directly compare our data with the manufacturers odometry data, without any sporadic
-unavailabilty of the data.
+We chose this kind of TF because, according to us, it was the best choice in terms of simplicity
+and also a great way to check that everything was working fine looking from ROS tools such as rviz,
+this because we could simply and directly compare our data with the manufacturers odometry data, 
+without any sporadic unavailabilty of the data.
+This transformation can simply be inspected using, among other options, the tool RVIZ, setting the
+fixed frame to odom, and then adding, "By display type" TF, under rviz.
 
 ***Structure of the custom message TODO***
 
-***Description of how to start/use the nodes TODO***
+***Description of how to start/use the nodes TODO*** @gabbo non so se lo vogliam fare questo, ma 
+non credo ce ne sia bisogno, penso che abbiamo scritto abbastanza.
 
-***Info you think are important/interesting TODO***
-***Profs suggerimento: In particular: quali nodi sono stati creati, come comunicano tra di loro 
-e con i dati forniti, che parametri usano, che servizi espongon ecc." TODO***
+***Info you think are important/interesting TODO(facoltativo)***
+
+
+***Quali nodi sono stati creati, come comunicano tra di loro 
+e con i dati forniti, che parametri usano, che servizi espongon ecc." TODO(facoltativo)***
+@gabbo stesso discorso di prima, non so se lo vogliam fare questo, ma 
+non credo ce ne sia bisogno, penso che abbiamo scritto abbastanza.
 
