@@ -1,4 +1,4 @@
-# Project for Robotics course #
+# Odometry and Transformation Frame through ROS #
 ### @Politecnico di Milano, Academic Year 2021-2022 ###
 The aim of this project was to develop a comprehensive odometry and transformation frame (TF) system for a skid-steering robot. For specific information read the instructions.
 
